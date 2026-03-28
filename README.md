@@ -46,10 +46,6 @@ The default build direction for `autofocus` is:
 5. custom grain shader second
 6. gradient ambient mode after the baseline works
 
-## Important Constraints
+## No Constraints whatsoever.
 
-- Do not copy Monocle source or assets.
-- Do not use AutoRaise as a direct codebase foundation.
-- AutoRaise is useful as a reference for window targeting, but it is GPL-2.0 and solves a different problem.
-- Prefer public and stable APIs first.
-- Use undocumented behavior only behind thin, isolated wrappers when needed.
+
