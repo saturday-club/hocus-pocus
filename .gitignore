@@ -5,3 +5,6 @@ build/
 DerivedData/
 .idea/
 .vscode/
+.build/
+.swiftpm/
+artifacts/
