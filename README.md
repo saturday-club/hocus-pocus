@@ -1,19 +1,16 @@
-# autofocus
+# hocus-pocus
 
-A native macOS focus overlay app built from scratch. Dims, blurs, and textures everything except your active window so you can concentrate on what matters.
+A native macOS focus overlay. Dims, blurs, and textures everything except your active window so you can concentrate.
 
-Inspired by [Monocle](https://heyimo.com/monocle) -- reverse-engineered from behavioral observation, not source code.
+Built from scratch with Swift + AppKit + Metal. Inspired by [Monocle](https://heyimo.com/monocle) -- reverse-engineered from behavioral observation, not source code.
 
-## Quick Start
+## Install
 
 ```bash
-# Build and run (requires Xcode 26+ / Swift 6.2+, macOS 14.6+)
-swift build
+git clone https://github.com/saturday-club/hocus-pocus.git
+cd hocus-pocus
 ./scripts/bundle.sh
 open build/AutoFocus.app
-
-# Or run debug build directly
-swift run
 ```
 
 Grant **Accessibility** permission when prompted (System Settings > Privacy & Security > Accessibility). This is needed once and persists across rebuilds thanks to ad-hoc codesigning.
@@ -363,7 +360,7 @@ The app needs Accessibility permission for AXUIElement. To avoid re-prompting:
 
 ## Related
 
-- [saturday-club/autofocus](https://github.com/saturday-club/autofocus) -- this repo
+- [saturday-club/hocus-pocus](https://github.com/saturday-club/hocus-pocus) -- this repo
 - [Monocle](https://heyimo.com/monocle) -- the commercial app that inspired this project
 - [AutoRaise](https://github.com/sbmpost/AutoRaise) -- reference for CG/AX window targeting (GPL-2.0, not used as base)
 
