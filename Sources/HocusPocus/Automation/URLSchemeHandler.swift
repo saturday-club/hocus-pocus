@@ -3,19 +3,19 @@ import AppKit
 @MainActor
 enum URLSchemeHandler {
 
-    /// Handle an `autofocus://` URL.
+    /// Handle a `hocus-pocus://` URL.
     ///
     /// Supported routes:
-    ///   - autofocus://toggle
-    ///   - autofocus://on
-    ///   - autofocus://off
-    ///   - autofocus://mode/toggle
-    ///   - autofocus://mode/ambient
-    ///   - autofocus://mode/deep
-    ///   - autofocus://ignore
-    ///   - autofocus://unignore
+    ///   - hocus-pocus://toggle
+    ///   - hocus-pocus://on
+    ///   - hocus-pocus://off
+    ///   - hocus-pocus://mode/toggle
+    ///   - hocus-pocus://mode/ambient
+    ///   - hocus-pocus://mode/deep
+    ///   - hocus-pocus://ignore
+    ///   - hocus-pocus://unignore
     static func handle(_ url: URL, appState: AppState) {
-        guard url.scheme == "autofocus" else { return }
+        guard url.scheme == "hocus-pocus" else { return }
 
         let command = url.host ?? ""
         let subcommand = url.pathComponents.dropFirst().first ?? ""

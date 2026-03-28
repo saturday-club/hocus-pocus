@@ -1,6 +1,6 @@
-# autofocus Master Prompt
+# hocus-pocus Master Prompt
 
-You are building `autofocus`, a native macOS menu bar application inspired by the behavior of Monocle, but implemented from scratch.
+You are building `hocus-pocus`, a native macOS menu bar application inspired by the behavior of Monocle, but implemented from scratch.
 
 The job is not to copy proprietary code, private assets, or exact branding. The job is to recreate the product category and interaction quality:
 

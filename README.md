@@ -10,7 +10,7 @@ Built from scratch with Swift + AppKit + Metal. Inspired by [Monocle](https://he
 git clone https://github.com/saturday-club/hocus-pocus.git
 cd hocus-pocus
 ./scripts/bundle.sh
-open build/AutoFocus.app
+open build/HocusPocus.app
 ```
 
 Grant **Accessibility** permission when prompted (System Settings > Privacy & Security > Accessibility). This is needed once and persists across rebuilds thanks to ad-hoc codesigning.
@@ -47,9 +47,9 @@ Grant **Accessibility** permission when prompted (System Settings > Privacy & Se
 
 **URL scheme:**
 ```
-autofocus://toggle | on | off
-autofocus://mode/toggle | ambient | deep
-autofocus://ignore | unignore
+hocus-pocus://toggle | on | off
+hocus-pocus://mode/toggle | ambient | deep
+hocus-pocus://ignore | unignore
 ```
 
 ## Architecture
@@ -106,9 +106,9 @@ When the focused app enters native macOS fullscreen:
 
 ```
 Package.swift                           # SPM manifest
-Sources/AutoFocus/
+Sources/HocusPocus/
   App/
-    AutoFocusApp.swift                  # @main, MenuBarExtra (.window style)
+    HocusPocusApp.swift                 # @main, MenuBarExtra (.window style)
     AppDelegate.swift                   # Lifecycle, wiring, URL scheme
     AppState.swift                      # @Observable central state
   Window/
@@ -131,7 +131,7 @@ Sources/AutoFocus/
     ExcludedAppsView.swift              # Excluded apps management
   Automation/
     HotkeyManager.swift                 # Carbon RegisterEventHotKey
-    URLSchemeHandler.swift              # autofocus:// routes
+    URLSchemeHandler.swift              # hocus-pocus:// routes
     ShakeDetector.swift                 # Mouse shake gesture detection
   Persistence/
     Defaults.swift                      # UserDefaults keys, FocusMode, TintPresets
@@ -183,7 +183,7 @@ swift build && swift run
 
 # Release .app bundle
 ./scripts/bundle.sh
-open build/AutoFocus.app
+open build/HocusPocus.app
 ```
 
 ## Building This With an AI Agent: A Detailed Guide

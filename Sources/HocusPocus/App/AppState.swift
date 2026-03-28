@@ -73,7 +73,7 @@ final class AppState {
     var frontmostAppIcon: NSImage?
 
     private init() {
-        UserDefaults.standard.registerAutoFocusDefaults()
+        UserDefaults.standard.registerHocusPocusDefaults()
         let ud = UserDefaults.standard
         self.isEnabled = ud.bool(forKey: DefaultsKey.isEnabled)
         let modeRaw = ud.string(forKey: DefaultsKey.mode) ?? FocusMode.deep.rawValue

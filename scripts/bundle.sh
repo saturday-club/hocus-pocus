@@ -1,26 +1,26 @@
 #!/bin/zsh
 set -euo pipefail
 
-# Build and bundle AutoFocus as a macOS .app
+# Build and bundle Hocus Pocus as a macOS .app
 cd "$(dirname "$0")/.."
 
-echo "Building AutoFocus..."
+echo "Building Hocus Pocus..."
 swift build -c release 2>&1
 
-APP_DIR="build/AutoFocus.app/Contents"
+APP_DIR="build/HocusPocus.app/Contents"
 mkdir -p "$APP_DIR/MacOS"
 mkdir -p "$APP_DIR/Resources"
 
 # Copy the binary
-cp ".build/release/AutoFocus" "$APP_DIR/MacOS/AutoFocus"
+cp ".build/release/HocusPocus" "$APP_DIR/MacOS/HocusPocus"
 
 # Copy app icon
-if [ -f "Sources/AutoFocus/Resources/AppIcon.icns" ]; then
-    cp "Sources/AutoFocus/Resources/AppIcon.icns" "$APP_DIR/Resources/"
+if [ -f "Sources/HocusPocus/Resources/AppIcon.icns" ]; then
+    cp "Sources/HocusPocus/Resources/AppIcon.icns" "$APP_DIR/Resources/"
 fi
 
 # Copy Metal shader resource bundle if it exists
-BUNDLE_PATH=$(find .build/release -name "AutoFocus_AutoFocus.bundle" -type d 2>/dev/null | head -1)
+BUNDLE_PATH=$(find .build/release -name "HocusPocus_HocusPocus.bundle" -type d 2>/dev/null | head -1)
 if [ -n "$BUNDLE_PATH" ]; then
     cp -R "$BUNDLE_PATH" "$APP_DIR/Resources/"
 fi
@@ -32,13 +32,13 @@ cat > "$APP_DIR/Info.plist" << 'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>dev.autofocus.app</string>
+    <string>club.saturday.hocuspocus</string>
     <key>CFBundleName</key>
-    <string>AutoFocus</string>
+    <string>HocusPocus</string>
     <key>CFBundleDisplayName</key>
-    <string>AutoFocus</string>
+    <string>Hocus Pocus</string>
     <key>CFBundleExecutable</key>
-    <string>AutoFocus</string>
+    <string>HocusPocus</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
@@ -55,10 +55,10 @@ cat > "$APP_DIR/Info.plist" << 'PLIST'
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>AutoFocus URL Scheme</string>
+            <string>Hocus Pocus URL Scheme</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>autofocus</string>
+                <string>hocus-pocus</string>
             </array>
         </dict>
     </array>
@@ -69,9 +69,9 @@ cat > "$APP_DIR/Info.plist" << 'PLIST'
 PLIST
 
 # Ad-hoc codesign so macOS remembers accessibility permission across rebuilds
-codesign --force --sign - "build/AutoFocus.app"
+codesign --force --sign - "build/HocusPocus.app"
 
-echo "App bundle created and signed at build/AutoFocus.app"
+echo "App bundle created and signed at build/HocusPocus.app"
 echo ""
 echo "To run:"
-echo "  open build/AutoFocus.app"
+echo "  open build/HocusPocus.app"

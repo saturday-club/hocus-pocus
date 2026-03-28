@@ -1,173 +1,195 @@
 #!/usr/bin/env python3
-"""Generate the Hocus Pocus app icon - frosted glass magic wand aesthetic."""
+"""Generate the Hocus Pocus app icon - circular lens with focus rings."""
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 import math
-import random
 
 SIZE = 1024
 CENTER = SIZE // 2
-random.seed(42)
 
 
 def make_icon() -> Image.Image:
-    # Base: dark background with macOS super-ellipse shape
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
 
-    # macOS-style rounded rect background
-    bg = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    bg_draw = ImageDraw.Draw(bg)
-    bg_draw.rounded_rectangle(
-        [40, 40, SIZE - 40, SIZE - 40],
-        radius=200,
-        fill=(18, 14, 32, 255),
-    )
-
-    # Gradient overlay: deep purple to dark blue
-    gradient = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    for y in range(SIZE):
-        t = y / SIZE
-        r = int(18 + t * 12)
-        g = int(14 + t * 8)
-        b = int(32 + t * 28)
-        for x in range(SIZE):
-            gradient.putpixel((x, y), (r, g, b, 255))
-    bg.paste(Image.composite(gradient, bg, bg), (0, 0))
-
-    # Re-mask to rounded rect
+    # macOS rounded rect mask
     mask = Image.new("L", (SIZE, SIZE), 0)
     mask_draw = ImageDraw.Draw(mask)
     mask_draw.rounded_rectangle([40, 40, SIZE - 40, SIZE - 40], radius=200, fill=255)
+
+    # Deep dark background with radial gradient
+    bg = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    for y in range(SIZE):
+        for x in range(SIZE):
+            dx = x - CENTER
+            dy = y - CENTER
+            dist = math.sqrt(dx * dx + dy * dy) / (SIZE * 0.7)
+            dist = min(dist, 1.0)
+            r = int(12 + dist * 6)
+            g = int(8 + dist * 4)
+            b = int(28 + dist * 12)
+            bg.putpixel((x, y), (r, g, b, 255))
     bg.putalpha(mask)
-
     img = bg.copy()
-    draw = ImageDraw.Draw(img)
 
-    # Frosted glass circles (layered, translucent)
-    glass_circles = [
-        (420, 380, 280, (80, 60, 180, 35)),   # large purple
-        (580, 520, 220, (40, 80, 200, 30)),    # medium blue
-        (350, 550, 180, (100, 50, 160, 25)),   # small purple
-        (620, 350, 150, (50, 100, 220, 28)),   # small blue
-        (480, 460, 320, (70, 70, 190, 20)),    # extra large subtle
-    ]
-
-    for cx, cy, radius, color in glass_circles:
-        circle_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-        circle_draw = ImageDraw.Draw(circle_layer)
-        circle_draw.ellipse(
-            [cx - radius, cy - radius, cx + radius, cy + radius],
-            fill=color,
-        )
-        # Blur for frosted effect
-        circle_layer = circle_layer.filter(ImageFilter.GaussianBlur(radius=40))
-        img = Image.alpha_composite(img, circle_layer)
-
-    # Central glow
+    # Outer ambient glow (large, soft purple)
     glow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     glow_draw = ImageDraw.Draw(glow)
-    for r in range(200, 0, -2):
-        alpha = int(40 * (1 - r / 200))
+    for r in range(350, 0, -2):
+        alpha = int(25 * (1 - r / 350))
         glow_draw.ellipse(
-            [CENTER - r, CENTER - r + 20, CENTER + r, CENTER + r + 20],
-            fill=(120, 100, 255, alpha),
+            [CENTER - r, CENTER - r, CENTER + r, CENTER + r],
+            fill=(90, 60, 200, alpha),
         )
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=30))
+    glow = glow.filter(ImageFilter.GaussianBlur(radius=40))
     img = Image.alpha_composite(img, glow)
 
-    # Magic wand
-    draw = ImageDraw.Draw(img)
-    wand_start = (340, 700)
-    wand_end = (650, 320)
+    # Concentric focus rings (camera lens / target aesthetic)
+    rings_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    rings_draw = ImageDraw.Draw(rings_layer)
 
-    # Wand body (thick line with gradient feel)
-    for offset in range(-6, 7):
-        t = abs(offset) / 6
-        alpha = int(255 * (1 - t * 0.6))
-        r = int(200 + 55 * (1 - t))
-        g = int(180 + 55 * (1 - t))
-        b = int(220 + 35 * (1 - t))
-        draw.line(
-            [(wand_start[0] + offset, wand_start[1]),
-             (wand_end[0] + offset, wand_end[1])],
-            fill=(r, g, b, alpha),
+    ring_radii = [300, 240, 180, 120]
+    ring_colors = [
+        (100, 80, 220, 40),
+        (120, 100, 240, 50),
+        (140, 120, 255, 55),
+        (160, 140, 255, 60),
+    ]
+
+    for radius, color in zip(ring_radii, ring_colors):
+        # Ring stroke (not filled)
+        rings_draw.ellipse(
+            [CENTER - radius, CENTER - radius, CENTER + radius, CENTER + radius],
+            outline=color,
             width=2,
         )
 
-    # Wand tip glow
-    tip_glow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    tip_draw = ImageDraw.Draw(tip_glow)
-    for r in range(80, 0, -1):
-        alpha = int(120 * (1 - r / 80))
-        tip_draw.ellipse(
-            [wand_end[0] - r, wand_end[1] - r,
-             wand_end[0] + r, wand_end[1] + r],
-            fill=(180, 160, 255, alpha),
-        )
-    tip_glow = tip_glow.filter(ImageFilter.GaussianBlur(radius=15))
-    img = Image.alpha_composite(img, tip_glow)
+    # Soft blur on rings
+    rings_blur = rings_layer.filter(ImageFilter.GaussianBlur(radius=3))
+    img = Image.alpha_composite(img, rings_blur)
+    img = Image.alpha_composite(img, rings_layer)
 
-    # Bright tip point
+    # Frosted glass disc in center (the "focused" area)
+    disc = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    disc_draw = ImageDraw.Draw(disc)
+
+    # Multi-layer frosted disc
+    for r in range(160, 0, -1):
+        t = r / 160
+        alpha = int(45 * (1 - t * t))
+        blue = int(180 + 60 * (1 - t))
+        purple = int(140 + 80 * (1 - t))
+        disc_draw.ellipse(
+            [CENTER - r, CENTER - r, CENTER + r, CENTER + r],
+            fill=(purple, 130, blue, alpha),
+        )
+
+    disc = disc.filter(ImageFilter.GaussianBlur(radius=12))
+    img = Image.alpha_composite(img, disc)
+
+    # Bright inner ring (highlight)
+    highlight = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    h_draw = ImageDraw.Draw(highlight)
+    h_draw.ellipse(
+        [CENTER - 90, CENTER - 90, CENTER + 90, CENTER + 90],
+        outline=(200, 190, 255, 100),
+        width=2,
+    )
+    highlight = highlight.filter(ImageFilter.GaussianBlur(radius=2))
+    img = Image.alpha_composite(img, highlight)
+
+    # Center bright dot (focal point)
+    focal = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    focal_draw = ImageDraw.Draw(focal)
+    for r in range(30, 0, -1):
+        t = r / 30
+        alpha = int(200 * (1 - t))
+        focal_draw.ellipse(
+            [CENTER - r, CENTER - r, CENTER + r, CENTER + r],
+            fill=(220, 210, 255, alpha),
+        )
+    focal_glow = focal.filter(ImageFilter.GaussianBlur(radius=6))
+    img = Image.alpha_composite(img, focal_glow)
+
     draw = ImageDraw.Draw(img)
     draw.ellipse(
-        [wand_end[0] - 8, wand_end[1] - 8,
-         wand_end[0] + 8, wand_end[1] + 8],
+        [CENTER - 6, CENTER - 6, CENTER + 6, CENTER + 6],
         fill=(255, 255, 255, 240),
     )
 
-    # Sparkles around the wand tip
-    sparkles = [
-        (610, 280, 4, (255, 255, 255, 220)),
-        (690, 340, 3, (200, 180, 255, 200)),
-        (680, 270, 5, (180, 160, 255, 180)),
-        (720, 310, 3, (220, 200, 255, 190)),
-        (640, 250, 3, (255, 240, 255, 170)),
-        (580, 270, 4, (200, 200, 255, 200)),
-        (700, 380, 3, (180, 170, 255, 160)),
-        (660, 230, 2, (255, 255, 255, 150)),
-        (740, 350, 2, (200, 190, 255, 140)),
-        (600, 350, 3, (220, 210, 255, 180)),
-    ]
+    # Crosshair lines (subtle, extends from center)
+    cross = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    cross_draw = ImageDraw.Draw(cross)
+    line_color = (180, 170, 255, 50)
 
+    # Horizontal
+    cross_draw.line([(CENTER - 300, CENTER), (CENTER - 40, CENTER)], fill=line_color, width=1)
+    cross_draw.line([(CENTER + 40, CENTER), (CENTER + 300, CENTER)], fill=line_color, width=1)
+    # Vertical
+    cross_draw.line([(CENTER, CENTER - 300), (CENTER, CENTER - 40)], fill=line_color, width=1)
+    cross_draw.line([(CENTER, CENTER + 40), (CENTER, CENTER + 300)], fill=line_color, width=1)
+
+    cross_blur = cross.filter(ImageFilter.GaussianBlur(radius=1))
+    img = Image.alpha_composite(img, cross_blur)
+    img = Image.alpha_composite(img, cross)
+
+    # Small tick marks on crosshairs
+    ticks = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    ticks_draw = ImageDraw.Draw(ticks)
+    tick_color = (180, 170, 255, 60)
+    tick_len = 8
+
+    for offset in [-200, -150, -100, 100, 150, 200]:
+        # Horizontal ticks
+        ticks_draw.line(
+            [(CENTER + offset, CENTER - tick_len), (CENTER + offset, CENTER + tick_len)],
+            fill=tick_color, width=1,
+        )
+        # Vertical ticks
+        ticks_draw.line(
+            [(CENTER - tick_len, CENTER + offset), (CENTER + tick_len, CENTER + offset)],
+            fill=tick_color, width=1,
+        )
+
+    img = Image.alpha_composite(img, ticks)
+
+    # Sparkle accents (top-right quadrant primarily)
     sparkle_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     sparkle_draw = ImageDraw.Draw(sparkle_layer)
 
-    for sx, sy, sr, color in sparkles:
+    sparkles = [
+        (650, 300, 4, 200), (700, 370, 3, 170), (620, 260, 3, 160),
+        (340, 290, 3, 150), (380, 680, 3, 140), (680, 600, 2, 130),
+        (290, 400, 2, 120), (720, 450, 2, 110),
+    ]
+
+    for sx, sy, sr, alpha in sparkles:
         # Four-pointed star
+        length = sr * 5
         for angle in [0, math.pi / 2]:
-            length = sr * 4
             x1 = sx + math.cos(angle) * length
             y1 = sy + math.sin(angle) * length
             x2 = sx - math.cos(angle) * length
             y2 = sy - math.sin(angle) * length
-            sparkle_draw.line([(x1, y1), (x2, y2)], fill=color, width=1)
+            sparkle_draw.line([(x1, y1), (x2, y2)], fill=(220, 210, 255, alpha), width=1)
+        sparkle_draw.ellipse([sx - sr, sy - sr, sx + sr, sy + sr], fill=(255, 255, 255, alpha))
 
-        # Center dot
-        sparkle_draw.ellipse(
-            [sx - sr, sy - sr, sx + sr, sy + sr],
-            fill=color,
-        )
-
-    # Soft glow on sparkles
-    sparkle_glow = sparkle_layer.filter(ImageFilter.GaussianBlur(radius=4))
+    sparkle_glow = sparkle_layer.filter(ImageFilter.GaussianBlur(radius=3))
     img = Image.alpha_composite(img, sparkle_glow)
     img = Image.alpha_composite(img, sparkle_layer)
 
-    # Subtle inner border on the icon shape
+    # Subtle border
     border = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     border_draw = ImageDraw.Draw(border)
     border_draw.rounded_rectangle(
         [40, 40, SIZE - 40, SIZE - 40],
         radius=200,
-        outline=(255, 255, 255, 20),
-        width=3,
+        outline=(255, 255, 255, 15),
+        width=2,
     )
     img = Image.alpha_composite(img, border)
 
-    # Re-apply mask for clean edges
+    # Final mask
     img.putalpha(mask)
-
     return img
 
 
@@ -199,22 +221,19 @@ if __name__ == "__main__":
     import os
 
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    resources = os.path.join(base, "Sources", "AutoFocus", "Resources")
+    resources = os.path.join(base, "Sources", "HocusPocus", "Resources")
 
     print("Generating icon...")
     icon = make_icon()
 
-    # Save 1024 PNG
     png_path = os.path.join(resources, "AppIcon.png")
     icon.save(png_path)
     print(f"Saved {png_path}")
 
-    # Generate iconset
     iconset_dir = os.path.join(base, "build", "AppIcon.iconset")
     print(f"Generating iconset at {iconset_dir}...")
     make_iconset(icon, iconset_dir)
 
-    # Convert to .icns
     icns_path = os.path.join(resources, "AppIcon.icns")
     os.system(f'iconutil -c icns -o "{icns_path}" "{iconset_dir}"')
     print(f"Saved {icns_path}")

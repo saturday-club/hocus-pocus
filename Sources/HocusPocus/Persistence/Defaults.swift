@@ -65,7 +65,7 @@ enum DefaultValues {
 }
 
 extension UserDefaults {
-    func registerAutoFocusDefaults() {
+    func registerHocusPocusDefaults() {
         register(defaults: [
             DefaultsKey.isEnabled: true,
             DefaultsKey.mode: FocusMode.deep.rawValue,

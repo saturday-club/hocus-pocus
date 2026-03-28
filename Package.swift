@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "AutoFocus",
+    name: "HocusPocus",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "AutoFocus",
-            path: "Sources/AutoFocus",
+            name: "HocusPocus",
+            path: "Sources/HocusPocus",
             resources: [
                 .process("Resources/")
             ],

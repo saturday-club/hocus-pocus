@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct AutoFocusApp: App {
+struct HocusPocusApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var appState = AppState.shared
 

@@ -31,7 +31,7 @@ struct SettingsView: View {
             Toggle("Highlight All Windows of Active App", isOn: $appState.highlightAllAppWindows)
 
             Section("About") {
-                Text("AutoFocus")
+                Text("Hocus Pocus")
                     .font(.headline)
                 Text("A focus overlay for macOS")
                     .foregroundStyle(.secondary)
@@ -102,10 +102,10 @@ struct SettingsView: View {
 
             Section("URL Scheme") {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("autofocus://toggle")
-                    Text("autofocus://on | off")
-                    Text("autofocus://mode/ambient | deep | toggle")
-                    Text("autofocus://ignore | unignore")
+                    Text("hocus-pocus://toggle")
+                    Text("hocus-pocus://on | off")
+                    Text("hocus-pocus://mode/ambient | deep | toggle")
+                    Text("hocus-pocus://ignore | unignore")
                 }
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)

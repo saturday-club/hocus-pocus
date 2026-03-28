@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Hocus Pocus"
 DMG_NAME="HocusPocus-0.1.0"
-APP_PATH="build/AutoFocus.app"
+APP_PATH="build/HocusPocus.app"
 DMG_DIR="build/dmg"
 DMG_PATH="build/${DMG_NAME}.dmg"
 
@@ -28,7 +28,7 @@ cp -R "$APP_PATH" "$DMG_DIR/"
 ln -s /Applications "$DMG_DIR/Applications"
 
 # Set volume icon if .icns exists
-ICON_SRC="Sources/AutoFocus/Resources/AppIcon.icns"
+ICON_SRC="Sources/HocusPocus/Resources/AppIcon.icns"
 
 # Create the DMG
 hdiutil create -volname "$APP_NAME" \
