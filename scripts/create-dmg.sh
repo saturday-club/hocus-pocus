@@ -27,6 +27,9 @@ cp -R "$APP_PATH" "$DMG_DIR/"
 # Create symlink to /Applications for drag-to-install
 ln -s /Applications "$DMG_DIR/Applications"
 
+# Set volume icon if .icns exists
+ICON_SRC="Sources/AutoFocus/Resources/AppIcon.icns"
+
 # Create the DMG
 hdiutil create -volname "$APP_NAME" \
     -srcfolder "$DMG_DIR" \

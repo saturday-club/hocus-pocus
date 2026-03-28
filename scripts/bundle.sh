@@ -14,6 +14,11 @@ mkdir -p "$APP_DIR/Resources"
 # Copy the binary
 cp ".build/release/AutoFocus" "$APP_DIR/MacOS/AutoFocus"
 
+# Copy app icon
+if [ -f "Sources/AutoFocus/Resources/AppIcon.icns" ]; then
+    cp "Sources/AutoFocus/Resources/AppIcon.icns" "$APP_DIR/Resources/"
+fi
+
 # Copy Metal shader resource bundle if it exists
 BUNDLE_PATH=$(find .build/release -name "AutoFocus_AutoFocus.bundle" -type d 2>/dev/null | head -1)
 if [ -n "$BUNDLE_PATH" ]; then
@@ -42,6 +47,8 @@ cat > "$APP_DIR/Info.plist" << 'PLIST'
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
     <key>CFBundleURLTypes</key>
