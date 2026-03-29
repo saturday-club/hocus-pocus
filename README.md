@@ -19,8 +19,7 @@ Grant **Accessibility** permission when prompted (System Settings > Privacy & Se
 
 | Feature | Status |
 |---------|--------|
-| Deep focus mode (full overlay behind active window) | Done |
-| Ambient mode (gradient falloff) | Done |
+| Focus overlay (behind active window via window ordering) | Done |
 | Gaussian blur with adjustable radius | Done |
 | Organic frosted-glass grain shader | Done |
 | Color tint with 7 presets | Done |
@@ -33,14 +32,13 @@ Grant **Accessibility** permission when prompted (System Settings > Privacy & Se
 | Multi-display support | Done |
 | Fullscreen app detection | Done |
 | Fade in/out transitions | Done |
-| Glass-style menu bar panel (MenuBarExtra .window) | Done |
+| Liquid Glass side panel (macOS 26+, NSPanel floating) | Done |
 
 ## Controls
 
 | Action | Method |
 |--------|--------|
 | Toggle overlay | Cmd+Shift+F, menu bar icon, or shake mouse |
-| Cycle mode (deep/ambient) | Cmd+Shift+M |
 | Exclude current app | Cmd+Shift+E |
 | Peek (temporary disable) | Hold Shift + shake mouse |
 | Settings | Menu bar > More, or Cmd+, |
@@ -48,7 +46,6 @@ Grant **Accessibility** permission when prompted (System Settings > Privacy & Se
 **URL scheme:**
 ```
 hocus-pocus://toggle | on | off
-hocus-pocus://mode/toggle | ambient | deep
 hocus-pocus://ignore | unignore
 ```
 
@@ -108,8 +105,8 @@ When the focused app enters native macOS fullscreen:
 Package.swift                           # SPM manifest
 Sources/HocusPocus/
   App/
-    HocusPocusApp.swift                 # @main, MenuBarExtra (.window style)
-    AppDelegate.swift                   # Lifecycle, wiring, URL scheme
+    HocusPocusApp.swift                 # @main, Settings scene
+    AppDelegate.swift                   # Lifecycle, NSStatusItem, side panel
     AppState.swift                      # @Observable central state
   Window/
     WindowPoller.swift                  # Event-driven + fallback polling
@@ -126,7 +123,8 @@ Sources/HocusPocus/
     GrainRenderer.swift                 # Metal compute pipeline
     GrayscaleFilter.swift               # CIColorControls desaturation
   Settings/
-    MenuBarPanel.swift                  # Glass-style menu bar dropdown
+    MenuBarPanel.swift                  # Liquid Glass card layout
+    SidePanelController.swift           # Floating NSPanel (right edge)
     SettingsView.swift                  # Full settings window (tabs)
     ExcludedAppsView.swift              # Excluded apps management
   Automation/
@@ -330,13 +328,17 @@ macOS fullscreen apps get their own Space. Your overlay needs to:
 
 Tell your agent: "Detect fullscreen by comparing the focused app's window bounds to the display dimensions. Hide the overlay in fullscreen Spaces. Use activeSpaceDidChangeNotification to re-evaluate when switching Spaces."
 
-### Phase 8: The Menu Bar UI
+### Phase 8: The Side Panel UI
 
-Use `MenuBarExtra` with `.window` style (not `.menu` style) for a custom panel:
-- `.menu` gives you a flat native menu (text + buttons only)
-- `.window` gives you a popover with full SwiftUI controls (sliders, custom views, materials)
+Use a floating `NSPanel` anchored to the right edge of the screen (not a MenuBarExtra dropdown):
+- `NSStatusItem` in AppDelegate handles the menu bar icon click
+- `SidePanelController` manages the floating panel (show/hide with fade)
+- Panel uses `styleMask: [.borderless, .nonactivatingPanel]` at `.floating` level
+- Click-outside-to-dismiss via global `NSEvent` monitor
 
-Use `.ultraThinMaterial` for glass card backgrounds. Compose sections as VStack with rounded-corner background cards. Build custom slider views with GeometryReader + DragGesture for colored fill tracks.
+On macOS 26+ (Tahoe), use Liquid Glass (`.glassEffect(.regular.interactive())`) on each card with a subtle white backing layer so the glass has light content to refract. Wrap cards in `GlassEffectContainer(spacing: 0)` to prevent shape merging. Fall back to `NSVisualEffectView` with `.underPageBackground` on older macOS.
+
+Build custom slider views with GeometryReader + DragGesture for colored fill tracks.
 
 ### Phase 9: Permissions
 

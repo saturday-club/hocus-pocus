@@ -8,6 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var shakeDetector: ShakeDetector?
     private var updateTimer: Timer?
 
+    // Side panel + status item
+    private var statusItem: NSStatusItem?
+    private var sidePanelController: SidePanelController?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
@@ -15,6 +19,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Prompt for accessibility once
         AccessibilityBridge.promptIfNeeded()
+
+        // Status bar icon
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let button = item.button {
+            button.image = NSImage(
+                systemSymbolName: appState.isEnabled ? "circle.fill" : "circle.dotted",
+                accessibilityDescription: "Hocus Pocus"
+            )
+            button.action = #selector(statusItemClicked)
+            button.target = self
+        }
+        self.statusItem = item
+
+        // Side panel
+        self.sidePanelController = SidePanelController()
 
         // Window polling (event-driven with 10Hz fallback)
         let poller = WindowPoller(appState: appState)
@@ -56,13 +75,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
 
-        // Sync sensitivity changes to the detector
+        // 15Hz update loop
+        let statusItem = self.statusItem
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 15.0, repeats: true) { _ in
             MainActor.assumeIsolated {
                 manager.update()
-                // Keep shake sensitivity in sync
                 if shake.sensitivity != appState.shakeSensitivity {
                     shake.sensitivity = appState.shakeSensitivity
+                }
+                // Keep status icon in sync
+                if let button = statusItem?.button {
+                    let name = appState.isEnabled ? "circle.fill" : "circle.dotted"
+                    let img = NSImage(systemSymbolName: name, accessibilityDescription: "Hocus Pocus")
+                    if button.image?.name() != img?.name() {
+                        button.image = img
+                    }
                 }
             }
         }
@@ -82,6 +109,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shakeDetector?.stop()
         overlayManager?.removeAllOverlays()
         hotkeyManager?.unregisterAll()
+    }
+
+    @objc private func statusItemClicked() {
+        sidePanelController?.toggle()
     }
 
     @objc private func handleURLEvent(

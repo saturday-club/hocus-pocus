@@ -5,25 +5,37 @@ import SwiftUI
 struct GlassCard<Content: View>: View {
     let cornerRadius: CGFloat
     @ViewBuilder let content: Content
+    @State private var isHovered = false
 
-    init(cornerRadius: CGFloat = 14, @ViewBuilder content: () -> Content) {
+    init(cornerRadius: CGFloat = 22, @ViewBuilder content: () -> Content) {
         self.cornerRadius = cornerRadius
         self.content = content()
     }
 
     var body: some View {
-        content
-            .background(
-                ZStack {
-                    VisualEffectBlur(material: .sidebar, blendingMode: .withinWindow)
-                    Color.white.opacity(0.06)
+        if #available(macOS 26, *) {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.white.opacity(0.12))
+                        .shadow(color: .black.opacity(0.3), radius: 20, y: 4)
+                )
+                .glassEffect(
+                    .regular.interactive(),
+                    in: .rect(cornerRadius: cornerRadius)
+                )
+        } else {
+            content
+                .background(
+                    VisualEffectBlur(material: .underPageBackground, blendingMode: .behindWindow)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        isHovered = hovering
+                    }
                 }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
-            )
+        }
     }
 }
 
@@ -53,15 +65,30 @@ struct MenuBarPanel: View {
     @State private var appState = AppState.shared
 
     var body: some View {
-        VStack(spacing: 10) {
-            topBar
-            modeCard
-            effectsCard
-            shakeCard
-            bottomBar
+        panelContent
+            .padding(14)
+            .frame(width: 340)
+    }
+
+    @ViewBuilder
+    private var panelContent: some View {
+        if #available(macOS 26, *) {
+            GlassEffectContainer(spacing: 0) {
+                VStack(spacing: 10) {
+                    topBar
+                    effectsCard
+                    shakeCard
+                    bottomBar
+                }
+            }
+        } else {
+            VStack(spacing: 10) {
+                topBar
+                effectsCard
+                shakeCard
+                bottomBar
+            }
         }
-        .padding(14)
-        .frame(width: 340)
     }
 
     // MARK: - Top Bar
@@ -119,43 +146,6 @@ struct MenuBarPanel: View {
         }
     }
 
-    // MARK: - Mode Card
-
-    private var modeCard: some View {
-        GlassCard {
-            HStack(spacing: 12) {
-                Image(systemName: appState.mode.icon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(appState.mode == .deep ? .indigo : .orange)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        VisualEffectBlur(material: .popover, blendingMode: .withinWindow)
-                            .clipShape(Circle())
-                    )
-                    .clipShape(Circle())
-
-                Text(appState.mode.label)
-                    .font(.system(size: 14, weight: .semibold))
-
-                Spacer()
-
-                Text("Mode")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-
-                Button {
-                    appState.cycleMode()
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-        }
-    }
 
     // MARK: - Effects Card
 
@@ -252,8 +242,8 @@ struct MenuBarPanel: View {
     // MARK: - Bottom Bar
 
     private var bottomBar: some View {
-        HStack(spacing: 10) {
-            GlassCard {
+        GlassCard {
+            HStack(spacing: 0) {
                 Button {
                     appState.grayscaleEnabled.toggle()
                 } label: {
@@ -264,13 +254,15 @@ struct MenuBarPanel: View {
                             .font(.system(size: 10, weight: .medium))
                     }
                     .foregroundStyle(appState.grayscaleEnabled ? .white : .secondary)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 80)
                     .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
-            }
 
-            GlassCard {
+                Divider()
+                    .frame(height: 30)
+                    .padding(.horizontal, 4)
+
                 Menu {
                     ForEach(TintPreset.presets) { preset in
                         Button {
