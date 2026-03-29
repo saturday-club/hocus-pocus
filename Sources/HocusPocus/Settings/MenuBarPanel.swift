@@ -4,38 +4,125 @@ import SwiftUI
 
 struct GlassCard<Content: View>: View {
     let cornerRadius: CGFloat
+    let baseFillOpacity: Double
+    let hoverFillOpacity: Double
+    let baseSheenOpacity: Double
+    let hoverSheenOpacity: Double
     @ViewBuilder let content: Content
     @State private var isHovered = false
 
-    init(cornerRadius: CGFloat = 22, @ViewBuilder content: () -> Content) {
+    init(
+        cornerRadius: CGFloat = 22,
+        baseFillOpacity: Double = 0.006,
+        hoverFillOpacity: Double = 0.014,
+        baseSheenOpacity: Double = 0.02,
+        hoverSheenOpacity: Double = 0.045,
+        @ViewBuilder content: () -> Content
+    ) {
         self.cornerRadius = cornerRadius
+        self.baseFillOpacity = baseFillOpacity
+        self.hoverFillOpacity = hoverFillOpacity
+        self.baseSheenOpacity = baseSheenOpacity
+        self.hoverSheenOpacity = hoverSheenOpacity
         self.content = content()
     }
 
     var body: some View {
-        if #available(macOS 26, *) {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.white.opacity(0.12))
-                        .shadow(color: .black.opacity(0.3), radius: 20, y: 4)
-                )
-                .glassEffect(
-                    .regular.interactive(),
-                    in: .rect(cornerRadius: cornerRadius)
-                )
-        } else {
-            content
-                .background(
-                    VisualEffectBlur(material: .underPageBackground, blendingMode: .behindWindow)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .onHover { hovering in
-                    withAnimation(.easeOut(duration: 0.15)) {
-                        isHovered = hovering
-                    }
-                }
+        Group {
+            if #available(macOS 26, *) {
+                content
+                    .background(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(.white.opacity(isHovered ? hoverFillOpacity : baseFillOpacity))
+                    )
+                    .overlay { reflectiveGlassBorder }
+                    .overlay(alignment: .top) { clearGlassSheen }
+                    .shadow(
+                        color: .black.opacity(isHovered ? 0.12 : 0.08),
+                        radius: isHovered ? 18 : 14,
+                        y: 4
+                    )
+                    .glassEffect(
+                        .clear
+                            .interactive(),
+                        in: .rect(cornerRadius: cornerRadius)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            } else {
+                content
+                    .background { cardBackdrop }
+                    .overlay { cardOutline }
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
         }
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+    }
+
+    private var cardBackdrop: some View {
+        ZStack {
+            GaussianBackdropBlur(
+                material: .popover,
+                blendingMode: .behindWindow,
+                intensity: isHovered ? 0.55 : 0.46
+            )
+
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(.white.opacity(isHovered ? 0.035 : 0.018))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private var cardOutline: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(isHovered ? 0.22 : 0.14),
+                        .white.opacity(0.05),
+                        .white.opacity(isHovered ? 0.14 : 0.1),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 0.75
+            )
+    }
+
+    private var clearGlassSheen: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(isHovered ? hoverSheenOpacity : baseSheenOpacity),
+                        .white.opacity(0),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(height: 16)
+            .blur(radius: 6)
+            .mask(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private var reflectiveGlassBorder: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(isHovered ? 0.34 : 0.22),
+                        .white.opacity(0.08),
+                        .white.opacity(isHovered ? 0.18 : 0.12),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 0.85
+            )
     }
 }
 
@@ -56,6 +143,51 @@ struct VisualEffectBlur: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+    }
+}
+
+struct GaussianBackdropBlur: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let intensity: Double
+
+    func makeNSView(context: Context) -> BlurView {
+        let view = BlurView(frame: .zero)
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = false
+        view.updateIntensity(intensity)
+        return view
+    }
+
+    func updateNSView(_ nsView: BlurView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.updateIntensity(intensity)
+    }
+}
+
+struct CustomStripBlur: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let intensity: Double
+    let opacity: Double
+
+    func makeNSView(context: Context) -> BlurView {
+        let view = BlurView(frame: .zero)
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = false
+        view.updateAppearance(amount: intensity, opacity: opacity)
+        return view
+    }
+
+    func updateNSView(_ nsView: BlurView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.updateAppearance(amount: intensity, opacity: opacity)
     }
 }
 
@@ -91,59 +223,118 @@ struct MenuBarPanel: View {
         }
     }
 
+    private var controlStrip: some View {
+        ZStack {
+            CustomStripBlur(
+                material: .underWindowBackground,
+                blendingMode: .behindWindow,
+                intensity: 0.16,
+                opacity: 0.19
+            )
+
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.white.opacity(0.01))
+
+            VStack(spacing: 0) {
+                topBarContent
+                    .padding(.horizontal, 10)
+                    .padding(.top, 10)
+                    .padding(.bottom, 8)
+
+                stripDivider
+
+                effectsContent
+                    .padding(18)
+
+                stripDivider
+
+                shakeContent
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+
+                stripDivider
+
+                bottomBarContent
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    private var stripDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.02))
+            .frame(height: 1)
+            .padding(.horizontal, 14)
+    }
+
     // MARK: - Top Bar
 
     private var topBar: some View {
         HStack(spacing: 10) {
             GlassCard {
-                Button {
-                    appState.excludedApps.toggle(appState.frontmostAppBundleID)
-                } label: {
-                    HStack(spacing: 10) {
-                        if let icon = appState.frontmostAppIcon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .frame(width: 32, height: 32)
-                                .clipShape(RoundedRectangle(cornerRadius: 7))
-                        } else {
-                            Image(systemName: "app.fill")
-                                .font(.system(size: 24))
-                                .frame(width: 32, height: 32)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(isCurrentAppExcluded ? "Ignored" : "Ignore")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text(appState.frontmostAppName)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: isCurrentAppExcluded ? "checkmark" : "plus")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                }
-                .buttonStyle(.plain)
+                excludeTileContent
             }
 
             GlassCard {
-                Button {
-                    appState.toggle()
-                } label: {
-                    Image(systemName: "power")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(appState.isEnabled ? .white : .secondary)
-                        .frame(width: 56, height: 56)
-                }
-                .buttonStyle(.plain)
+                powerTileContent
             }
         }
+    }
+
+    private var excludeTileContent: some View {
+        Button {
+            appState.excludedApps.toggle(appState.frontmostAppBundleID)
+        } label: {
+            HStack(spacing: 10) {
+                if let icon = appState.frontmostAppIcon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 32, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                } else {
+                    Image(systemName: "app.fill")
+                        .font(.system(size: 24))
+                        .frame(width: 32, height: 32)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isCurrentAppExcluded ? "Ignored" : "Ignore")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(appState.frontmostAppName)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: isCurrentAppExcluded ? "checkmark" : "plus")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var topBarContent: some View {
+        HStack(spacing: 10) {
+            excludeTileContent
+            powerTileContent
+        }
+    }
+
+    private var powerTileContent: some View {
+        Button {
+            appState.toggle()
+        } label: {
+            Image(systemName: "power")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(appState.isEnabled ? .white : .secondary)
+                .frame(width: 56, height: 56)
+        }
+        .buttonStyle(.plain)
     }
 
 
@@ -151,30 +342,34 @@ struct MenuBarPanel: View {
 
     private var effectsCard: some View {
         GlassCard(cornerRadius: 16) {
-            VStack(spacing: 22) {
-                EffectRow(
-                    icon: "drop.fill",
-                    label: "Blur",
-                    value: $appState.blurAmount,
-                    color: .blue
-                )
+            effectsContent
+                .padding(18)
+        }
+    }
 
-                EffectRow(
-                    icon: "circle.fill",
-                    label: "Tint",
-                    value: $appState.tintOpacity,
-                    color: tintSwiftUIColor,
-                    enabled: $appState.tintEnabled
-                )
+    private var effectsContent: some View {
+        VStack(spacing: 22) {
+            EffectRow(
+                icon: "drop.fill",
+                label: "Blur",
+                value: $appState.blurAmount,
+                color: .blue
+            )
 
-                EffectRow(
-                    icon: "water.waves",
-                    label: "Grain",
-                    value: $appState.grainIntensity,
-                    color: .cyan
-                )
-            }
-            .padding(18)
+            EffectRow(
+                icon: "circle.fill",
+                label: "Tint",
+                value: $appState.tintOpacity,
+                color: tintSwiftUIColor,
+                enabled: $appState.tintEnabled
+            )
+
+            EffectRow(
+                icon: "water.waves",
+                label: "Grain",
+                value: $appState.grainIntensity,
+                color: .cyan
+            )
         }
     }
 
@@ -182,60 +377,64 @@ struct MenuBarPanel: View {
 
     private var shakeCard: some View {
         GlassCard {
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Button {
-                        appState.shakeEnabled.toggle()
-                    } label: {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(appState.shakeEnabled ? .blue : .secondary)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                VisualEffectBlur(material: .popover, blendingMode: .withinWindow)
-                                    .clipShape(Circle())
-                            )
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
+            shakeContent
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .animation(.easeOut(duration: 0.2), value: appState.shakeEnabled)
+        }
+    }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Shake to toggle")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(appState.shakeEnabled ? .primary : .secondary)
-                        Text("or hold Shift + Shake to peek")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    }
+    private var shakeContent: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Button {
+                    appState.shakeEnabled.toggle()
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(appState.shakeEnabled ? .blue : .secondary)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            VisualEffectBlur(material: .popover, blendingMode: .withinWindow)
+                                .clipShape(Circle())
+                        )
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
 
-                    Spacer()
-
-                    SettingsLink {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Shake to toggle")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(appState.shakeEnabled ? .primary : .secondary)
+                    Text("or hold Shift + Shake to peek")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
                 }
 
-                if appState.shakeEnabled {
-                    HStack(spacing: 8) {
-                        Text("Sensitivity")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                Spacer()
 
-                        SliderTrack(value: $appState.shakeSensitivity, color: .blue, trackHeight: 3, thumbSize: 10)
+                SettingsLink {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
 
-                        Text(sensitivityLabel)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 30)
-                    }
+            if appState.shakeEnabled {
+                HStack(spacing: 8) {
+                    Text("Sensitivity")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+
+                    SliderTrack(value: $appState.shakeSensitivity, color: .blue, trackHeight: 3, thumbSize: 10)
+
+                    Text(sensitivityLabel)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 30)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .animation(.easeOut(duration: 0.2), value: appState.shakeEnabled)
         }
     }
 
@@ -243,66 +442,70 @@ struct MenuBarPanel: View {
 
     private var bottomBar: some View {
         GlassCard {
-            HStack(spacing: 0) {
-                Button {
-                    appState.grayscaleEnabled.toggle()
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "circle.lefthalf.filled")
-                            .font(.system(size: 18))
-                        Text("Mono")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundStyle(appState.grayscaleEnabled ? .white : .secondary)
-                    .frame(width: 80)
-                    .padding(.vertical, 12)
+            bottomBarContent
+        }
+    }
+
+    private var bottomBarContent: some View {
+        HStack(spacing: 0) {
+            Button {
+                appState.grayscaleEnabled.toggle()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .font(.system(size: 18))
+                    Text("Mono")
+                        .font(.system(size: 10, weight: .medium))
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(appState.grayscaleEnabled ? .white : .secondary)
+                .frame(width: 80)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
 
-                Divider()
-                    .frame(height: 30)
-                    .padding(.horizontal, 4)
+            Divider()
+                .frame(height: 30)
+                .padding(.horizontal, 4)
 
-                Menu {
-                    ForEach(TintPreset.presets) { preset in
-                        Button {
-                            appState.tintEnabled = true
-                            appState.tintPresetID = preset.id
-                        } label: {
-                            HStack {
-                                Circle()
-                                    .fill(Color(nsColor: preset.color))
-                                    .frame(width: 10, height: 10)
-                                Text(preset.name)
-                                if appState.tintPresetID == preset.id && appState.tintEnabled {
-                                    Image(systemName: "checkmark")
-                                }
+            Menu {
+                ForEach(TintPreset.presets) { preset in
+                    Button {
+                        appState.tintEnabled = true
+                        appState.tintPresetID = preset.id
+                    } label: {
+                        HStack {
+                            Circle()
+                                .fill(Color(nsColor: preset.color))
+                                .frame(width: 10, height: 10)
+                            Text(preset.name)
+                            if appState.tintPresetID == preset.id && appState.tintEnabled {
+                                Image(systemName: "checkmark")
                             }
                         }
                     }
-                    Divider()
-                    Button("No Tint") { appState.tintEnabled = false }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "display")
-                            .font(.system(size: 16))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Auto-hide")
-                                .font(.system(size: 11, weight: .medium))
-                            Text("Off")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .semibold))
+                }
+                Divider()
+                Button("No Tint") { appState.tintEnabled = false }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "display")
+                        .font(.system(size: 16))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Auto-hide")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("Off")
+                            .font(.system(size: 9))
                             .foregroundStyle(.tertiary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
                 }
-                .menuStyle(.borderlessButton)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
             }
+            .menuStyle(.borderlessButton)
         }
     }
 

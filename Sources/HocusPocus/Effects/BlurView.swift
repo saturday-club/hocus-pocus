@@ -24,13 +24,21 @@ final class BlurView: NSVisualEffectView {
     }
 
     func updateIntensity(_ amount: Double) {
+        updateAppearance(amount: amount, opacity: nil)
+    }
+
+    func updateAppearance(amount: Double, opacity: Double?) {
         let clamped = CGFloat(min(max(amount, 0), 1))
 
         // Map 0-1 to blur radius 15-50pt for deep Monocle-like blur
         customBlurRadius = 15.0 + clamped * 35.0
 
-        // Alpha always near-full so the overlay is solid
-        alphaValue = 0.7 + clamped * 0.3
+        if let opacity {
+            alphaValue = CGFloat(min(max(opacity, 0), 1))
+        } else {
+            // Alpha always near-full so the overlay is solid
+            alphaValue = 0.7 + clamped * 0.3
+        }
         applyCustomBlurRadius()
     }
 
