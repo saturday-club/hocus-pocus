@@ -64,6 +64,8 @@ cat > "$APP_DIR/Info.plist" << 'PLIST'
     </array>
     <key>NSAccessibility</key>
     <true/>
+    <key>NSPrefersDisplaySafeAreaCompatibilityMode</key>
+    <false/>
 </dict>
 </plist>
 PLIST

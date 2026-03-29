@@ -6,6 +6,7 @@ final class OverlayManager {
     private var overlays: [CGDirectDisplayID: (window: OverlayWindow, contentView: OverlayContentView)] = [:]
     private let appState: AppState
     private let poller: WindowPoller
+    private let notchEars = NotchEarOverlay()
     private var lastSnapshots: [WindowSnapshot] = []
     private var overlaysVisible = false
     private var wasEnabled = false
@@ -30,6 +31,7 @@ final class OverlayManager {
             entry.window.close()
         }
         overlays.removeAll()
+        notchEars.teardown()
         overlaysVisible = false
     }
 
@@ -47,6 +49,7 @@ final class OverlayManager {
                 entry.contentView.teardown()
                 entry.window.fadeOut()
             }
+            notchEars.hide()
             overlaysVisible = false
             lastSnapshots = []
             return
@@ -74,55 +77,73 @@ final class OverlayManager {
         for (_, entry) in overlays {
             entry.contentView.updateEffects(state: appState)
         }
+        notchEars.updateEffects(state: appState)
+
+        // Check fullscreen to swap main overlays for notch ear overlays
+        let fsScreen = fullscreenScreen()
+        let isFocusedAppFullscreen = fsScreen != nil
+
+        if isFocusedAppFullscreen {
+            // Fullscreen: hide main overlays, show ears in notch area
+            if overlaysVisible {
+                for (_, entry) in overlays {
+                    entry.window.orderOut(nil)
+                }
+                overlaysVisible = false
+            }
+            if let screen = fsScreen {
+                notchEars.show(on: screen, state: appState)
+            }
+            return
+        }
+
+        // Not fullscreen: main overlay covers ears already, hide ear windows
+        notchEars.hide()
 
         let snapshots = poller.focusedSnapshots
         let focusChanged = snapshots != lastSnapshots
 
         if focusChanged || !overlaysVisible {
             lastSnapshots = snapshots
-
             let topWindowID = snapshots.first?.windowID
-            let isFocusedAppFullscreen = checkIfFocusedAppIsFullscreen()
 
             for (_, entry) in overlays {
-                if isFocusedAppFullscreen {
-                    // Fullscreen: just hide. The app fills the screen, no dimming needed.
-                    entry.window.orderOut(nil)
+                if let wid = topWindowID {
+                    entry.window.orderBelow(windowNumber: Int(wid))
                 } else {
-                    if let wid = topWindowID {
-                        entry.window.orderBelow(windowNumber: Int(wid))
-                    } else {
-                        entry.window.orderFrontRegardless()
-                    }
+                    entry.window.orderFrontRegardless()
+                }
 
-                    if appState.mode == .ambient {
-                        let windowsByDisplay = Dictionary(
-                            grouping: snapshots,
-                            by: { $0.displayID }
-                        )
-                        let screen = entry.window.screen ?? NSScreen.main!
-                        let frames = windowsByDisplay[screen.displayID]?.map(\.frame) ?? []
-                        entry.contentView.updateFocusRegion(
-                            frames: frames,
-                            mode: .ambient
-                        )
-                    } else {
-                        entry.contentView.clearMask()
-                    }
+                if appState.mode == .ambient {
+                    let windowsByDisplay = Dictionary(
+                        grouping: snapshots,
+                        by: { $0.displayID }
+                    )
+                    let screen = entry.window.screen ?? NSScreen.main!
+                    let frames = windowsByDisplay[screen.displayID]?.map(\.frame) ?? []
+                    entry.contentView.updateFocusRegion(
+                        frames: frames,
+                        mode: .ambient
+                    )
+                } else {
+                    entry.contentView.clearMask()
                 }
             }
-
-            overlaysVisible = !isFocusedAppFullscreen
+            overlaysVisible = true
+        } else {
+            // Safety: ensure overlay windows are on screen even if no focus change.
+            // Fixes startup race where poller hasn't detected windows yet.
+            for (_, entry) in overlays where !entry.window.isVisible {
+                entry.window.orderFrontRegardless()
+            }
         }
     }
 
-    /// Check if the frontmost application is currently in native macOS fullscreen.
-    private func checkIfFocusedAppIsFullscreen() -> Bool {
-        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return false }
+    /// Returns the screen where the frontmost app is in native fullscreen, or nil.
+    private func fullscreenScreen() -> NSScreen? {
+        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
         let pid = frontApp.processIdentifier
 
-        // Check via CGWindowList: if the app has a window at layer 0 matching the full screen size,
-        // and the screen's visibleFrame equals its full frame, it's likely fullscreen
         let windowList = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly],
             kCGNullWindowID
@@ -138,18 +159,22 @@ final class OverlayManager {
                   let _ = bounds["Y"] as? CGFloat
             else { continue }
 
-            // Check if this window covers the full display (fullscreen indicator)
             for screen in NSScreen.screens {
                 let sf = screen.frame
-                let displayMatch = abs(w - sf.width) < 2 && abs(h - sf.height) < 2
+                // On notched MacBooks, fullscreen apps in compatibility mode
+                // are shorter by safeAreaInsets.top (they don't extend behind the notch)
+                let notchInset = screen.safeAreaInsets.top
+                let matchesFull = abs(h - sf.height) < 2
+                let matchesBelowNotch = notchInset > 0 && abs(h - (sf.height - notchInset)) < 2
+                let displayMatch = abs(w - sf.width) < 2
+                    && (matchesFull || matchesBelowNotch)
                     && abs(x - sf.origin.x) < 2
                 if displayMatch {
-                    // Window covers the full screen -- it's fullscreen
-                    return true
+                    return screen
                 }
             }
         }
-        return false
+        return nil
     }
 
     private func createOverlay(for screen: NSScreen) {
@@ -183,6 +208,14 @@ final class OverlayManager {
                 // Force re-evaluation after a Space switch
                 self?.lastSnapshots = []
                 self?.update()
+
+                // Re-check after fullscreen animation completes (~0.7s)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                    MainActor.assumeIsolated {
+                        self?.lastSnapshots = []
+                        self?.update()
+                    }
+                }
             }
         }
     }
