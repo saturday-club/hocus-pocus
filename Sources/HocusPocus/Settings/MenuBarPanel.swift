@@ -20,6 +20,10 @@ struct GlassCard<Content: View>: View {
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+            )
     }
 }
 
@@ -51,9 +55,9 @@ struct MenuBarPanel: View {
     var body: some View {
         VStack(spacing: 10) {
             topBar
-            shakeCard
             modeCard
             effectsCard
+            shakeCard
             bottomBar
         }
         .padding(14)
@@ -112,67 +116,6 @@ struct MenuBarPanel: View {
                 }
                 .buttonStyle(.plain)
             }
-        }
-    }
-
-    // MARK: - Shake Card
-
-    private var shakeCard: some View {
-        GlassCard {
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Button {
-                        appState.shakeEnabled.toggle()
-                    } label: {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(appState.shakeEnabled ? .blue : .secondary)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                VisualEffectBlur(material: .popover, blendingMode: .withinWindow)
-                                    .clipShape(Circle())
-                            )
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Shake to toggle")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(appState.shakeEnabled ? .primary : .secondary)
-                        Text("or hold Shift + Shake to peek")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    Spacer()
-
-                    SettingsLink {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if appState.shakeEnabled {
-                    HStack(spacing: 8) {
-                        Text("Sensitivity")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-
-                        SliderTrack(value: $appState.shakeSensitivity, color: .blue, trackHeight: 3, thumbSize: 10)
-
-                        Text(sensitivityLabel)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 30)
-                    }
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .animation(.easeOut(duration: 0.2), value: appState.shakeEnabled)
         }
     }
 
@@ -242,6 +185,67 @@ struct MenuBarPanel: View {
                 )
             }
             .padding(18)
+        }
+    }
+
+    // MARK: - Shake Card
+
+    private var shakeCard: some View {
+        GlassCard {
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Button {
+                        appState.shakeEnabled.toggle()
+                    } label: {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(appState.shakeEnabled ? .blue : .secondary)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                VisualEffectBlur(material: .popover, blendingMode: .withinWindow)
+                                    .clipShape(Circle())
+                            )
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Shake to toggle")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(appState.shakeEnabled ? .primary : .secondary)
+                        Text("or hold Shift + Shake to peek")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    Spacer()
+
+                    SettingsLink {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if appState.shakeEnabled {
+                    HStack(spacing: 8) {
+                        Text("Sensitivity")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+
+                        SliderTrack(value: $appState.shakeSensitivity, color: .blue, trackHeight: 3, thumbSize: 10)
+
+                        Text(sensitivityLabel)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 30)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .animation(.easeOut(duration: 0.2), value: appState.shakeEnabled)
         }
     }
 

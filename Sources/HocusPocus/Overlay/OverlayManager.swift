@@ -23,6 +23,10 @@ final class OverlayManager {
         for screen in NSScreen.screens {
             createOverlay(for: screen)
         }
+        // If app is already enabled, immediately show the new overlays
+        if appState.isEnabled {
+            wasEnabled = false  // Force re-trigger of enable transition
+        }
     }
 
     func removeAllOverlays() {
@@ -36,26 +40,29 @@ final class OverlayManager {
     }
 
     func update() {
-        // Handle enable/disable transitions with fade animation
-        if appState.isEnabled && !wasEnabled {
+        // Handle disable: fade out and return early
+        if !appState.isEnabled {
+            if wasEnabled {
+                wasEnabled = false
+                for (_, entry) in overlays {
+                    entry.contentView.teardown()
+                    entry.window.fadeOut()
+                }
+                notchEars.hide()
+                overlaysVisible = false
+                lastSnapshots = []
+            }
+            return
+        }
+
+        // Handle enable transition
+        if !wasEnabled {
             wasEnabled = true
             for (_, entry) in overlays {
                 entry.window.fadeIn()
             }
             overlaysVisible = true
-        } else if !appState.isEnabled && wasEnabled {
-            wasEnabled = false
-            for (_, entry) in overlays {
-                entry.contentView.teardown()
-                entry.window.fadeOut()
-            }
-            notchEars.hide()
-            overlaysVisible = false
-            lastSnapshots = []
-            return
         }
-
-        guard appState.isEnabled else { return }
 
         // Reconcile displays
         let currentDisplayIDs = Set(overlays.keys)
@@ -145,13 +152,15 @@ final class OverlayManager {
         let pid = frontApp.processIdentifier
 
         let windowList = CGWindowListCopyWindowInfo(
-            [.optionOnScreenOnly],
+            [.optionOnScreenOnly, .excludeDesktopElements],
             kCGNullWindowID
         ) as? [[String: Any]] ?? []
 
         for info in windowList {
             guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t,
                   ownerPID == pid,
+                  let layer = info[kCGWindowLayer as String] as? Int,
+                  layer == 0,
                   let bounds = info[kCGWindowBounds as String] as? [String: Any],
                   let w = bounds["Width"] as? CGFloat,
                   let h = bounds["Height"] as? CGFloat,
