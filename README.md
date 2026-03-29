@@ -2,7 +2,7 @@
 
 A native macOS focus overlay. Dims, blurs, and textures everything except your active window so you can concentrate.
 
-Built from scratch with Swift + AppKit + Metal. Inspired by [Monocle](https://heyimo.com/monocle) -- reverse-engineered from behavioral observation, not source code.
+Built from scratch with Swift + AppKit + Metal. Inspired by Monoocle ,reverse-engineered from behavioral observation, not source code.
 
 ## Install
 
